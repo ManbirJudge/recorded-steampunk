@@ -53,7 +53,7 @@ Function PostTestDataFromFormToServer() As Dictionary
     testData("topic") = testTopic
     If IsNumeric(testTotalMarks) Then
         testData("total-marks") = CDbl(testTotalMarks)
-    Else        
+    Else
         funcRes("success") = 2
         funcRes("show_msg") = "Total marks should be a number."
 
@@ -64,7 +64,7 @@ Function PostTestDataFromFormToServer() As Dictionary
         testData("marks-obtained") = CDbl(testMarksObtained)
     Else
         funcRes("success") = 2
-        funcRes("show_msg") =  "Marks obtainedshould be a number."
+        funcRes("show_msg") = "Marks obtainedshould be a number."
 
         Set PostTestDataFromFormToServer = funcRes
         Exit Function
@@ -124,7 +124,7 @@ Private Sub AddNewTestSubmitAndAddMoreBtn_Click()
 
     If res("success") = 0 Then
         MsgBox res("show_msg"), vbInformation
-        Call ModuleMain.ClearAddTestForm()
+        Call ModuleMain.ClearAddTestForm
     ElseIf res("success") = 1 Then
         MsgBox res("show_msg"), vbExclamation
     Else
@@ -147,7 +147,7 @@ Private Sub AddNewTestSubmitAndCloseBtn_Click()
         MsgBox res("show_msg"), vbExclamation
     Else
         MsgBox res("show_msg"), vbCritical
-    End if
+    End If
 End Sub
 
 Private Sub AddNewTestCancelBtn_Click()

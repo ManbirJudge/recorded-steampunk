@@ -9,7 +9,7 @@ if (!(Test-Path -Path $pythonVenvPath)) {
 }
 
 Write-Host "`n--------------------------------- Activating Python virtual environment. ---------------------------------`n"
-Start-Process ($pythonVenvPath + "\Scripts\Activate.ps1")
+Start-Process ($pythonVenvPath + "\Scripts\activate")
 
 Write-Host "`n--------------------------------- Installing required dependencies. ---------------------------------`n"
 pip install -r $requirementsPath

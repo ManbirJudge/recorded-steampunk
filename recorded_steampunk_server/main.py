@@ -3,7 +3,6 @@ from datetime import datetime
 
 from flask import Flask, request
 
-# NOTE: date is stored as milliseconds
 DATE_FMT = '%d-%m-%Y'
 
 app = Flask(__name__)
@@ -25,23 +24,30 @@ def index():
 def get_test_record(page_no: str):
     page_no = int(page_no)
 
-    if request.data.decode('utf-8') == '':
-        data = {}
-    else:
-        data = dict(request.json)
+    tests_per_page = request.args.get('tests-per-page')
+    str_dates = request.args.get('str-dates')
+    sort_by = request.args.get('sort-by')
+    sort_order = request.args.get('sort-order')
 
-    if data.get('tests-per-page') is None:
+    if tests_per_page is None:
         tests_per_page = 20
     else:
-        tests_per_page = int(data['test-per-page'])
+        tests_per_page = int(tests_per_page)
 
-    if data.get('str-dates') is None:
+    if str_dates is None:
         str_dates = False
     else:
-        str_dates = bool(data['str-dates'])
+        str_dates = bool(str_dates)
 
-    print(tests_per_page)
-    print(str_dates)
+    if sort_by is None:
+        sort_by = 'date'
+    else:
+        sort_by = str(sort_by)
+
+    if sort_order is None:
+        sort_order = 'DESC'
+    else:
+        sort_order = str(sort_order).upper()
 
     with sql.connect('database.db') as con:
         cur = con.cursor()
@@ -50,8 +56,8 @@ def get_test_record(page_no: str):
         num_pages = num_tests // tests_per_page + (num_tests % tests_per_page > 0)
 
         result = cur.execute(
-            f'SELECT date, title, subject, topic, total_marks, marks_obtained, id FROM test_record LIMIT'
-            f' {tests_per_page} OFFSET {page_no * tests_per_page}'
+            f'SELECT date, title, subject, topic, total_marks, marks_obtained, id FROM test_record ORDER BY {sort_by} '
+            f' {sort_order} LIMIT {tests_per_page} OFFSET {page_no * tests_per_page}'
         )
 
         tests = [{
@@ -150,7 +156,7 @@ def replace_test_record():
 
         try:
             new_tests_data = [(
-                int(datetime.strptime(test['date'], DATE_FMT).timestamp()),
+                int(test['date']),
                 test['title'],
                 test['subject'],
                 test['topic'],
@@ -172,6 +178,7 @@ def replace_test_record():
         con.commit()
 
         return {
+            'status': 0,
             'message': 'Test record replaced successfully.'
         }
 
@@ -200,7 +207,4 @@ def greet(name: str):
 
 
 if __name__ == '__main__':
-    app.run(
-        '0.0.0.0',
-        5000
-    )
+    app.run('0.0.0.0', 5000)

@@ -1,5 +1,6 @@
 Attribute VB_Name = "ModuleMain"
 
+' utility functions
 Function CellRangeUnderTitle(ByVal Title As String) As Range
     Dim ColI As Long
     Dim LastRow As Long
@@ -41,13 +42,19 @@ Function CellRangeToStringArray(ByVal cellRange As Range) As String()
     CellRangeToStringArray = stringArr
 End Function
 
-Function TimestampMsToDate(timestampMs As Double) As Date 
-    TimestampMsToDate = DateAdd("s", timestampMs / 1000, #1/1/1970#)
+Public Function TimestampToDate(ByVal timestamp As LongLong) As Date
+    TimestampToDate = DateAdd("s", timestamp / 1000, #1/1/1970#)
 End Function
 
+Public Function DateToTimestamp(ByVal dt As Date) As LongLong
+    DateToTimestamp = DateDiff("s", #1/1/1970#, dt) * 1000
+End Function
+
+' button macros
 Sub UploadToServer()
     Sheets("Test Record").Select
     
+    ' defining vars
     Dim DatesRange As Range
     Dim TitlesRange As Range
     Dim SubjectsRange As Range
@@ -61,7 +68,10 @@ Sub UploadToServer()
     Dim Topics() As String
     Dim TotalMarks() As String
     Dim MarksObtained() As String
+
+    Dim numTests As Integer
     
+    ' getting ranges
     Set DatesRange = CellRangeUnderTitle("Date")
     Set TitlesRange = CellRangeUnderTitle("Title")
     Set SubjectsRange = CellRangeUnderTitle("Subject")
@@ -69,135 +79,75 @@ Sub UploadToServer()
     Set TotalMarksRange = CellRangeUnderTitle("Total Marks")
     Set MarksObtainedRange = CellRangeUnderTitle("Marks Obtained")
     
+    ' getting values from ranges
     Dates = CellRangeToStringArray(DatesRange)
     Titles = CellRangeToStringArray(TitlesRange)
     Subjects = CellRangeToStringArray(SubjectsRange)
     Topics = CellRangeToStringArray(TopicsRange)
     TotalMarks = CellRangeToStringArray(TotalMarksRange)
     MarksObtained = CellRangeToStringArray(MarksObtainedRange)
-    
-    ' The HTTP part
-    Dim Data As New Dictionary
-    Dim TestRecordData() As Dictionary
-    
-    Data.CompareMode = CompareMethod.TextCompare
-    
-    Dim numTests As Integer
+
     numTests = DatesRange.Rows.Count
     
-    ReDim TestRecordData(1 To numTests)
+    ' preparing request body data
+    Dim reqBody As New Dictionary
+    Dim testRecord() As Dictionary
+    
+    ReDim testRecord(1 To numTests)
     
     Dim i As Integer
     For i = 1 To numTests
-        Set TestRecordData(i) = New Dictionary
+        Set testRecord(i) = New Dictionary
         
-        TestRecordData(i).CompareMode = CompareMethod.TextCompare
-        
-        TestRecordData(i)("date") = Dates(i)
-        TestRecordData(i)("title") = Titles(i)
-        TestRecordData(i)("subject") = Subjects(i)
-        TestRecordData(i)("topic") = Topics(i)
-        TestRecordData(i)("total-marks") = TotalMarks(i)
-        TestRecordData(i)("marks-obtained") = MarksObtained(i)
-        
+        testRecord(i)("date") = DateToTimestamp(DateValue(Dates(i)))
+        testRecord(i)("title") = Titles(i)
+        testRecord(i)("subject") = Subjects(i)
+        testRecord(i)("topic") = Topics(i)
+        testRecord(i)("total-marks") = TotalMarks(i)
+        testRecord(i)("marks-obtained") = MarksObtained(i)
     Next i
     
-    Debug.Print JsonConverter.ConvertToJson(TestRecordData)
+    reqBody("tests") = testRecord
     
-    Data("tests") = TestRecordData
+    ' creating and sending the request
+    Dim req As Object
+    Set req = CreateObject("MSXML2.serverXMLHTTP")
     
-    Dim xmlHttp As Object
-    Set xmlHttp = CreateObject("MSXML2.serverXMLHTTP")
+    req.Open "PUT", "http://localhost:5000/test-record", False
+    req.setRequestHeader "Content-Type", "application/json"
+    req.Send JsonConverter.ConvertToJson(reqBody)
     
-    xmlHttp.Open "PUT", "http://localhost:5000/test-record", False
-    xmlHttp.setRequestHeader "Content-Type", "application/json"
-    xmlHttp.Send JsonConverter.ConvertToJson(Data)
+    ' getting response
+    Dim res As New Dictionary
+    Set res = JsonConverter.ParseJson(req.responseText)
     
-    Dim responseJson As New Dictionary
-    Set responseJson = JsonConverter.ParseJson(xmlHttp.responseText)
-    
-    If responseJson.Exists("message") Then
-        MsgBox responseJson("message"), vbInformation
-    ElseIf responseJson.Exists("error") Then
-        MsgBox responseJson("error"), vbCritical
+    ' showing result
+    If res("status") = 0 Then
+        MsgBox res("message"), vbInformation
+    ElseIf res("status") = 1 Then
+        MsgBox res("message"), vbExclamation
+    ElseIf res("status") = 2 Then
+        MsgBox res("message"), vbCritical
+    ElseIf res("status") = -1 Then
+        MsgBox "Unknown response from server:\n" & res("message"), vbExclamation
     Else
-        MsgBox "Unkwon response from server as follows:\n" & JsonConverter.ConvertToJson(responseJson), vbExclamation
+        MsgBox "Unkwon response format:\n" & JsonConverter.ConvertToJson(res), vbExclamation
     End If
 End Sub
 
-Sub DownloadFromServer()
-    Dim tests() As Dictionary
+' form utils
+Function ResetDownloadOptionsForm()
+    DownloadOptionsForm.DownLoadOptionsSortByDateOption.Value = True
+    DownloadOptionsForm.DownLoadOptionsSortOrderDescOption.Value = True
+End Function
 
-    Dim req As Object
-    Dim response As New Dictionary
-
-    Dim currentPage As Integer
-    Dim testsPerPage As Integer
-    Dim numPages As Integer
-    Dim numTests As Integer
-
-    currentPage = 0
-
-    Set req = CreateObject("MSXML2.serverXMLHTTP")
-
-    req.Open "GET", "http://localhost:5000/test-record/" & currentPage, False
-    req.setRequestHeader "Content-Type", "application/json"
-    req.Send "{" & Chr(34) & "str-dates" & Chr(34) & ": true}"
-
-    Set response = JsonConverter.ParseJson(req.responseText)
-
-    testsPerPage = response("tests-per-page")
-    numPages = response("num-pages")
-    numTests = response("num-tests")
-
-    ReDim tests(1 To testsPerPage * numPages)
-
-    Dim i As Integer
-    For i = 1 To numTests
-        Set tests(i + testsPerPage * currentPage) = response("tests")(i)
-    Next i
-
-    While currentPage + 1 < numPages
-        Set req = CreateObject("MSXML2.serverXMLHTTP")
-
-        req.Open "GET", "http://localhost:5000/test-record/" & currentPage + 1, False
-        req.setRequestHeader "Content-Type", "application/json"
-        req.Send "{" & Chr(34) & "str-dates" & Chr(34) & ": true}"
-
-        Set response = JsonConverter.ParseJson(req.responseText)
-
-        numTests = response("num-tests")
-
-        For i = 1 To numTests
-            Set tests(i + testsPerPage * (currentPage + 1)) = response("tests")(i)
-        Next i
-
-        currentPage = response("current-page")
-    Wend
-
-    For i = 1 To UBound(tests)
-        Dim test As New Dictionary
-        Set test = tests(i)
-
-        Debug.Print test("date")
-        Debug.Print TimestampMsToDate(test("date"))
-
-        Cells(i + 1, 1).Value = Format(TimestampMsToDate(test("date")), "dd-mm-yyyy")
-        Cells(i + 1, 2).Value = test("title")
-        Cells(i + 1, 3).Value = test("subject")
-        Cells(i + 1, 4).Value = test("topic")
-        Cells(i + 1, 5).Value = test("total-marks")
-        Cells(i + 1, 6).Value = test("marks-obtained")
-    Next i
-End Sub
-
-Function ClearAddTestForm()
-    AddTestForm.AddTestFormSubjectDropdown.AddItem("Science")
-    AddTestForm.AddTestFormSubjectDropdown.AddItem("Maths")
-    AddTestForm.AddTestFormSubjectDropdown.AddItem("SST")
-    AddTestForm.AddTestFormSubjectDropdown.AddItem("Hindi")
-    AddTestForm.AddTestFormSubjectDropdown.AddItem("Punjabi")
-    AddTestForm.AddTestFormSubjectDropdown.AddItem("English")
+Function ResetAddTestForm()
+    AddTestForm.AddTestFormSubjectDropdown.AddItem ("Science")
+    AddTestForm.AddTestFormSubjectDropdown.AddItem ("Maths")
+    AddTestForm.AddTestFormSubjectDropdown.AddItem ("SST")
+    AddTestForm.AddTestFormSubjectDropdown.AddItem ("Hindi")
+    AddTestForm.AddTestFormSubjectDropdown.AddItem ("Punjabi")
+    AddTestForm.AddTestFormSubjectDropdown.AddItem ("English")
 
     AddTestForm.AddNewTestDateInput.Text = ""
     AddTestForm.AddNewTestTitleInput.Text = ""
@@ -210,7 +160,15 @@ Function ClearAddTestForm()
     AddTestForm.AddNewTestMarksObtainedSpinBtn.Value = 0
 End Function
 
+' form opening macros
+Sub OpenDownloadOptionsForm()
+    Call ResetDownloadOptionsForm
+    DownloadOptionsForm.Show
+End Sub
+
 Sub OpenAddTestForm()
-    Call ClearAddTestForm()
+    Call ResetAddTestForm
     AddTestForm.Show
 End Sub
+
+
