@@ -1,6 +1,8 @@
 package com.example.recordedsteampunk.api
 
 object ApiConstants {
+    const val DEFAULT_TESTS_PER_PAGE = 5
+
     private const val DEBUG_IP = "192.168.0.119:5000"
     private const val PROD_IP = "UNDEFINED"
 

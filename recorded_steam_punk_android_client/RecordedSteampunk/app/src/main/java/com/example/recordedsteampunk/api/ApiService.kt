@@ -15,8 +15,10 @@ interface ApiService {
     fun getTestRecord(
         @Path("page-no") pageNo: Int = 0,
 
+        @Query("tests-per-page") testsPerPage: Int = ApiConstants.DEFAULT_TESTS_PER_PAGE,
+        @Query("str-dates") strDates: Boolean = false,
         @Query("sort-by") sortBy: String = "date",
-        @Query("sort-order") sortOrder: String = "desc"
+        @Query("sort-order") sortOrder: Int = 1
     ): Call<GetTestRecordResponse>
 
     @POST(ApiConstants.TEST_RECORD_URL)

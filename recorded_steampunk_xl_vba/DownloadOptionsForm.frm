@@ -94,7 +94,7 @@ End Function
 
 Private Sub DownloadOptionsFormDownloadBtn_Click()
    Dim sortBy As String: sortBy = "date"
-   Dim sortOrder As String: sortOrder = "asc"
+   Dim sortOrder As Integer: sortOrder = 1
 
    If DownLoadOptionsSortByDateOption.Value = True Then
       sortBy = "date"
@@ -103,9 +103,9 @@ Private Sub DownloadOptionsFormDownloadBtn_Click()
    End If
 
    If DownLoadOptionsSortOrderAscOption.Value = True Then
-      sortOrder = "asc"
+      sortOrder = 0
    ElseIf DownLoadOptionsSortOrderDescOption.Value = True Then
-      sortOrder = "desc"
+      sortOrder = 1
    End If
    
    DownloadFromServer sortBy, sortOrder

@@ -16,7 +16,7 @@ import java.util.Locale
 
 class TestRecordRecyclerAdapter() : RecyclerView.Adapter<TestRecordRecyclerAdapter.TestViewHolder>() {
     companion object {
-        val DATE_FORMAT = SimpleDateFormat("dd-MM-yyy", Locale.getDefault())
+        fun getDateFormat() = SimpleDateFormat("dd-MM-yyy", Locale.getDefault())
     }
 
     private lateinit var tests: ArrayList<Test>
@@ -66,12 +66,12 @@ class TestRecordRecyclerAdapter() : RecyclerView.Adapter<TestRecordRecyclerAdapt
 
         tracker?.let {
             holder.mTitleText.text = test.title
-            holder.mDateText.text = DATE_FORMAT.format(Date(test.date))
+            holder.mDateText.text = getDateFormat().format(Date(test.date))
             holder.mSubjectText.text = test.subject
             holder.mTopicText.text = test.topic
             holder.mMarksObtainedText.text = test.marksObtained.toString()
             holder.mTotalMarksText.text = test.totalMarks.toString()
-            holder.mPercentageText.text = "${test.marksObtained / test.totalMarks * 100}%"
+            holder.mPercentageText.text = context.resources.getString(R.string.percentage_text, test.marksObtained / test.totalMarks * 100)
 
             if (it.isSelected(getItemId(position))) {
                 holder.mItemView.alpha = 0.75f

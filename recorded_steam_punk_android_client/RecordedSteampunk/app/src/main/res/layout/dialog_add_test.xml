@@ -28,6 +28,7 @@
         android:id="@+id/textLayout1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:focusable="false"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/add_test_dialog_appbar_layout">
@@ -36,7 +37,8 @@
             android:id="@+id/add_test_dialog_date_input"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Date"
+            android:focusable="false"
+            android:hint="@string/date_placeholder"
             android:inputType="date" />
     </com.google.android.material.textfield.TextInputLayout>
 
@@ -54,8 +56,7 @@
             android:id="@+id/add_test_dialog_title_input"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Test Lesson - 1"
-            android:hint="Title" />
+            android:hint="@string/title_placeholder" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
@@ -72,8 +73,7 @@
             android:id="@+id/add_test_dialog_subject_input"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="SST"
-            android:hint="Subject" />
+            android:hint="@string/subject_placeholder" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
@@ -90,8 +90,7 @@
             android:id="@+id/add_test_dialog_topic_input"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Movement in Towns"
-            android:hint="Topic" />
+            android:hint="@string/topic_placeholder" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
@@ -108,8 +107,7 @@
             android:id="@+id/add_test_dialog_total_marks_input"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Total Marks"
-            android:text="10"
+            android:hint="@string/total_marks_placeholder"
             android:inputType="numberDecimal" />
     </com.google.android.material.textfield.TextInputLayout>
 
@@ -127,8 +125,7 @@
             android:id="@+id/add_test_dialog_marks_obtained_input"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Marks Obtained"
-            android:text="9"
+            android:hint="@string/marks_obtained_placeholder"
             android:inputType="numberDecimal" />
     </com.google.android.material.textfield.TextInputLayout>
 

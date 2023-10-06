@@ -17,6 +17,7 @@ import com.example.recordedsteampunk.adapter.TestRecordDetailsLookup
 import com.example.recordedsteampunk.adapter.TestRecordItemKeyProvider
 import com.example.recordedsteampunk.adapter.TestRecordRecyclerAdapter
 import com.example.recordedsteampunk.api.ApiClient
+import com.example.recordedsteampunk.api.ApiConstants
 import com.example.recordedsteampunk.databinding.ActivityMainBinding
 import com.example.recordedsteampunk.dialog.AddTestDialogFragment
 import com.example.recordedsteampunk.model.Test
@@ -26,6 +27,7 @@ import com.example.recordedsteampunk.model.response.AddTestResponse
 import com.example.recordedsteampunk.model.response.DeleteTestsResponse
 import com.example.recordedsteampunk.model.response.GetTestRecordResponse
 import com.example.recordedsteampunk.model.response.STATUS
+import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import retrofit2.Call
 import retrofit2.Callback
@@ -42,13 +44,40 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var apiClient: ApiClient
 
+    private var currentTestsPage: Int = 0
+    private var numTestPages: Int = 0
+
     private lateinit var testRecordSwipeRefreshLayout: SwipeRefreshLayout
 
     private lateinit var testRecordRecyclerView: RecyclerView
     private lateinit var testRecordRecyclerAdapter: TestRecordRecyclerAdapter
     private lateinit var testRecordRecyclerSelectionTracker: SelectionTracker<Long>
 
+    private val messageRecyclerScrollListener: RecyclerView.OnScrollListener = object : RecyclerView.OnScrollListener() {
+        override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+            super.onScrolled(recyclerView, dx, dy)
+
+            if (testRecordSwipeRefreshLayout.isRefreshing) return
+              
+            recyclerView.layoutManager?.let {
+                val numTotal = it.itemCount
+                val numVisible = it.childCount
+                val pastVisibleItemPos = (it as LinearLayoutManager).findFirstVisibleItemPosition()
+
+                if (pastVisibleItemPos + numVisible >= numTotal) {
+                    // debugFab.text = "Load more tests."
+                    if (currentTestsPage < numTestPages - 1) {
+                        loadTestRecord(true)
+                    }
+                } else {
+                    // debugFab.text = "Do not load more tests."
+                }
+            }
+        }
+    }
+
     private lateinit var addTestFab: FloatingActionButton
+    private lateinit var debugFab: ExtendedFloatingActionButton
 
     private var testRecord: ArrayList<Test> = arrayListOf()
 
@@ -71,6 +100,7 @@ class MainActivity : AppCompatActivity() {
 
         testRecordRecyclerView.setHasFixedSize(true)
         testRecordRecyclerView.layoutManager = LinearLayoutManager(applicationContext)
+        testRecordRecyclerView.addOnScrollListener(messageRecyclerScrollListener)
 
         testRecordRecyclerAdapter = TestRecordRecyclerAdapter(testRecord, this)
         testRecordRecyclerView.adapter = testRecordRecyclerAdapter
@@ -98,7 +128,7 @@ class MainActivity : AppCompatActivity() {
         testRecordSwipeRefreshLayout = binding.testRecordSwipeRefreshLayout
 
         testRecordSwipeRefreshLayout.setOnRefreshListener {
-            getTestRecord()
+            loadTestRecord()
         }
 
         // setting up add test fab
@@ -138,11 +168,18 @@ class MainActivity : AppCompatActivity() {
 
             dialogFrag.show(supportFragmentManager, TAG)
         }
+
+        // setting up debug fab
+        debugFab = binding.mainDebugFab
+
+        debugFab.setOnClickListener {
+            toastIt("This button did nothing.", this)
+        }
     }
 
     override fun onStart() {
         super.onStart()
-        getTestRecord()
+        loadTestRecord()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -165,11 +202,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun getTestRecord() {
+    private fun loadTestRecord(more: Boolean = false) {
         testRecordSwipeRefreshLayout.isRefreshing = true
 
         apiClient.getApiService().getTestRecord(
-            pageNo = 0
+            pageNo = if (more) currentTestsPage + 1 else currentTestsPage,
+            testsPerPage = ApiConstants.DEFAULT_TESTS_PER_PAGE
         ).enqueue(object : Callback<GetTestRecordResponse> {
             override fun onFailure(call: Call<GetTestRecordResponse>, t: Throwable) {
                 t.printStackTrace()
@@ -177,18 +215,23 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onResponse(
-                call: Call<GetTestRecordResponse>, response: Response<GetTestRecordResponse>
+                call: Call<GetTestRecordResponse>,
+                response: Response<GetTestRecordResponse>
             ) {
                 val responseBody = response.body()
 
                 if (responseBody != null) {
-                    val f1 = testRecord.size
+//                    val f1 = testRecord.size
 
-                    testRecord.removeAll(testRecord.toSet())
-                    testRecordRecyclerAdapter.notifyItemRangeRemoved(0, f1)
+//                    testRecord.removeAll(testRecord.toSet())
+//                    testRecordRecyclerAdapter.notifyItemRangeRemoved(0, f1)
+
+                    numTestPages = responseBody.numPages
 
                     testRecord.addAll(responseBody.tests)
-                    testRecordRecyclerAdapter.notifyItemRangeRemoved(0, testRecord.size)
+                    testRecordRecyclerAdapter.notifyItemRangeInserted(currentTestsPage * ApiConstants.DEFAULT_TESTS_PER_PAGE, testRecord.size)
+
+                    currentTestsPage++
                 } else {
                     Toast.makeText(this@MainActivity, "Response body is null.", Toast.LENGTH_SHORT).show()
                 }

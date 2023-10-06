@@ -10,7 +10,7 @@ import android.widget.DatePicker
 import androidx.appcompat.widget.Toolbar
 import androidx.fragment.app.DialogFragment
 import com.example.recordedsteampunk.R
-import com.example.recordedsteampunk.adapter.TestRecordRecyclerAdapter.Companion.DATE_FORMAT
+import com.example.recordedsteampunk.adapter.TestRecordRecyclerAdapter.Companion.getDateFormat
 import com.google.android.material.textfield.TextInputEditText
 import java.util.Calendar
 import java.util.Date
@@ -72,7 +72,7 @@ class AddTestDialogFragment : DialogFragment() {
         toolbar.inflateMenu(R.menu.menu_add_test_dialog)
 
         // setting up date input and date picker dialog
-        dateInput.setText(DATE_FORMAT.format(currentCal.time))
+        dateInput.setText(getDateFormat().format(currentCal.time))
 
         val datePickerDialog = DatePickerDialog(
             requireContext(),
@@ -81,17 +81,15 @@ class AddTestDialogFragment : DialogFragment() {
                 currentCal.set(Calendar.MONTH, month)
                 currentCal.set(Calendar.DAY_OF_MONTH, dayOfMonth)
 
-                dateInput.setText("$dayOfMonth-${month + 1}-$year")
+                dateInput.setText(getDateFormat().format(currentCal.time))
             },
             currentCal.get(Calendar.YEAR),
             currentCal.get(Calendar.MONTH),
             currentCal.get(Calendar.DAY_OF_MONTH)
         )
 
-        dateInput.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus) {
-                datePickerDialog.show()
-            }
+        dateInput.setOnClickListener {
+            datePickerDialog.show()
         }
 
         // setting up the done button function

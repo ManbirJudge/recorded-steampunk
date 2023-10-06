@@ -1,5 +1,7 @@
+import json
 import sqlite3 as sql
 from datetime import datetime
+from typing import List
 
 from flask import Flask, request
 
@@ -14,10 +16,53 @@ with sql.connect('database.db') as con:
                 'title STRING, subject STRING, topic STRING, total_marks REAL, marks_obtained REAL)')
     con.commit()
 
+SORT_ORDER = {
+    0: 'ASC',
+    1: 'DESC'
+}
+
+
+def create_sql_read_cmd(
+        table: str,
+        fields: List['str'],
+
+        should_sort: bool = False,
+        sort_by: str = 'date',
+        sort_order: int = 1,
+
+        should_filter: bool = False,
+        filters: List[dict] | None = None,
+
+        should_paginate: bool = False,
+        tests_per_page: int = 20,
+        page_no: int = None
+) -> str:
+    if filters is None:
+        filters = list()
+
+    cmd = f'SELECT {", ".join(fields)} from {table}'
+
+    if should_filter:
+        filter_cmd_str = ''
+
+        for filter_ in filters:
+            if filter_['type'] == 'comparison':
+                filter_cmd_str += f'WHERE {filter_["col"]} = {filter_["val"]}'
+            else:
+                print(f'Unknown filter type: {filter_["type"]}')
+
+    if should_sort:
+        cmd = f'{cmd} ORDER BY {sort_by} {SORT_ORDER[sort_order]}'
+
+    if should_paginate:
+        cmd = f'{cmd} LIMIT {tests_per_page} OFFSET {page_no * tests_per_page}'
+
+    return cmd
+
 
 @app.route('/')
 def index():
-    return '<p>Hello, World!</p>'
+    return '<h1>This is an API only web application; so nothing here on the index page.</h1>'
 
 
 @app.get('/test-record/<page_no>')
@@ -28,6 +73,7 @@ def get_test_record(page_no: str):
     str_dates = request.args.get('str-dates')
     sort_by = request.args.get('sort-by')
     sort_order = request.args.get('sort-order')
+    filters = request.args.get('filters')
 
     if tests_per_page is None:
         tests_per_page = 20
@@ -37,7 +83,7 @@ def get_test_record(page_no: str):
     if str_dates is None:
         str_dates = False
     else:
-        str_dates = bool(str_dates)
+        str_dates = str_dates == 'true'
 
     if sort_by is None:
         sort_by = 'date'
@@ -45,9 +91,12 @@ def get_test_record(page_no: str):
         sort_by = str(sort_by)
 
     if sort_order is None:
-        sort_order = 'DESC'
+        sort_order = 1
     else:
-        sort_order = str(sort_order).upper()
+        sort_order = int(sort_order)
+
+    if filters is not None:
+        filters = list(json.loads(str(filters)))
 
     with sql.connect('database.db') as con:
         cur = con.cursor()
@@ -55,10 +104,25 @@ def get_test_record(page_no: str):
         num_tests = cur.execute('SELECT COUNT(*) FROM test_record').fetchone()[0]
         num_pages = num_tests // tests_per_page + (num_tests % tests_per_page > 0)
 
-        result = cur.execute(
-            f'SELECT date, title, subject, topic, total_marks, marks_obtained, id FROM test_record ORDER BY {sort_by} '
-            f' {sort_order} LIMIT {tests_per_page} OFFSET {page_no * tests_per_page}'
+        cmd = create_sql_read_cmd(
+            table='test_record',
+            fields=['date', 'title', 'subject', 'topic', 'total_marks', 'marks_obtained', 'id'],
+
+            should_sort=True,
+            sort_by=sort_by,
+            sort_order=sort_order,
+
+            should_filter=filters is None,
+            filters=filters,
+
+            should_paginate=True,
+            tests_per_page=tests_per_page,
+            page_no=page_no
         )
+
+        print(cmd)
+
+        res = cur.execute(cmd)
 
         tests = [{
             'id': int(row[6]),
@@ -68,7 +132,7 @@ def get_test_record(page_no: str):
             'topic': row[3],
             'total-marks': float(row[4]),
             'marks-obtained': float(row[5]),
-        } for row in result]
+        } for row in res]
 
         return {
             'tests-per-page': tests_per_page,

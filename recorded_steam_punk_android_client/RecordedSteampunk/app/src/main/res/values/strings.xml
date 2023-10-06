@@ -1,4 +1,21 @@
 <resources>
     <string name="app_name">Recorded Steampunk</string>
-    <string name="action_settings">Settings</string>
+
+    <string name="action_delete_title">Delete</string>
+    <string name="action_settings_title">Settings</string>
+
+    <string name="add_new_test_fab_desc">Add new test.</string>
+
+    <string name="debug_fab_desc">Debug button.</string>
+    <string name="debug_fab_text">Debug</string>
+
+    <string name="percentage_text">%1$.2f%%</string>
+
+    <string name="date_placeholder">Date</string>
+    <string name="title_placeholder">Title</string>
+    <string name="marks_obtained_placeholder">Marks obtained</string>
+    <string name="total_marks_placeholder">Total marks</string>
+    <string name="percentage_placeholder">Percentage</string>
+    <string name="subject_placeholder">Subject</string>
+    <string name="topic_placeholder">Topic</string>
 </resources>
